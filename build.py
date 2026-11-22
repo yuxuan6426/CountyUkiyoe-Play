@@ -14,7 +14,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / 'public'
-ARCHIVE = 'https://yuxuan6426.github.io/CountyUkiyoe/'
+ARCHIVE = 'https://xian.yuxuan.wiki/'
 
 
 def public_base(value):
