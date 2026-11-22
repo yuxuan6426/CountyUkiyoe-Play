@@ -1,5 +1,5 @@
 import { roles, configuredBase, archiveBase } from './catalog.mjs';
-import { modes, makePrompt, readReply, matchCard, makeShareUrl, readShare } from './core.mjs';
+import { modes, makeExampleReceipt, makePrompt, readReply, matchCard, makeShareUrl, readShare } from './core.mjs';
 
 const byId = id => document.getElementById(id);
 const pageBase = configuredBase || new URL('./', location.href).href;
@@ -62,6 +62,7 @@ function gotoPrompt() {
   if (location.hash.startsWith('#card=') || location.hash === '#import-ai') history.replaceState(null, '', new URL('./', location.href));
   selectMode('human');
   currentCard = undefined;
+  showReport();
   clearPreview();
   byId('result').hidden = true;
   byId('prompt-title').focus();
@@ -80,6 +81,24 @@ function clearPreview() {
   byId('share-native').hidden = true;
 }
 
+function showReport(report) {
+  const container = byId('result-report');
+  const why = report?.why ?? '';
+  const patterns = report?.patterns ?? [];
+  const limits = report?.limits ?? '';
+  container.hidden = !why && !patterns.length && !limits;
+  byId('report-why').hidden = !why;
+  byId('report-why-text').textContent = why;
+  byId('report-patterns').hidden = !patterns.length;
+  byId('report-patterns-list').replaceChildren(...patterns.map(pattern => {
+    const item = document.createElement('li');
+    item.textContent = pattern;
+    return item;
+  }));
+  byId('report-limits').hidden = !limits;
+  byId('report-limits-text').textContent = limits;
+}
+
 function showResult(card, focus = true) {
   currentCard = card;
   clearPreview();
@@ -91,6 +110,7 @@ function showResult(card, focus = true) {
   byId('role-name').textContent = card.role.name;
   byId('result-traits').textContent = card.labels.join(' / ');
   byId('result-caption').textContent = card.caption;
+  showReport(card.report);
   byId('result-status').textContent = '';
   byId('result').hidden = false;
   if (focus) byId('role-name').focus();
@@ -100,8 +120,8 @@ function showResult(card, focus = true) {
 function checkLink() {
   const card = readShare(location.hash, roles);
   if (card) showResult(card, false);
-  else if (location.hash === '#import-ai') {
-    selectMode('ai');
+  else if (location.hash === '#import' || location.hash === '#import-ai') {
+    selectMode(location.hash === '#import-ai' ? 'ai' : 'human');
     byId('import').scrollIntoView({ block: 'start' });
   }
   else if (location.hash.startsWith('#card=')) {
@@ -119,7 +139,8 @@ function showLocalCard(card) {
 }
 
 byId('example').addEventListener('click', () => {
-  const card = matchCard({ mode, scope: 'current', traits: ['organize', 'observe'] }, roles);
+  const input = JSON.stringify(makeExampleReceipt(mode));
+  const card = matchCard(readReply(input, roles, mode), roles);
   showLocalCard({ ...card, source: '示例卡' });
 });
 
@@ -148,6 +169,7 @@ byId('import-form').addEventListener('submit', event => {
     showLocalCard(card);
   } catch (error) {
     currentCard = undefined;
+    showReport();
     clearPreview();
     byId('result').hidden = true;
     byId('import-status').textContent = error.message;

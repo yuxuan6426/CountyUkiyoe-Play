@@ -73,6 +73,12 @@ details summary { cursor: pointer; }
 .result-content { padding: 12px; }
 .result-card h2 { margin-bottom: 8px; }
 .reference, .traits { color: var(--muted); }
+.result-report { margin-top: 16px; padding: clamp(14px, 3vw, 24px); border: 1px solid var(--rule); background: var(--ivory); overflow-wrap: anywhere; }
+.result-report h3, .result-report dl { margin: 0; }
+.result-report dl { display: grid; gap: 12px; margin-top: 12px; }
+.result-report dt { font-weight: 750; color: var(--muted); }
+.result-report dd { margin: 4px 0 0; white-space: pre-line; }
+.result-report ul { margin: 0; padding-inline-start: 1.25em; }
 .result-tools { margin-top: 14px; }
 .share-preview img { display: block; width: min(100%, 420px); height: auto; }
 .footer { border-top: 1px solid var(--rule); padding: 20px 0 30px; font-size: .78rem; color: var(--muted); }

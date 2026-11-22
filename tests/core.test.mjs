@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { makePrompt, readReply, matchCard, makeShareUrl, readShare } from '../public/core.mjs';
+import { makePrompt, makeExampleReceipt, readReply, matchCard, makeShareUrl, readShare } from '../public/core.mjs';
 
 const roles = JSON.parse(readFileSync(new URL('../public/roles.json', import.meta.url)));
 const plain = { v: 1, mode: 'human', scope: 'history', traits: ['organize', 'observe'] };
@@ -65,12 +65,69 @@ test('all eight traits resolve in both modes; share URL carries role and mode', 
   assert.equal(matchCard({ mode: 'human', scope: 'manual', traits: ['connect'] }, roles).source, '自主领卡');
 });
 
-test('prompt uses authorized evidence by default and expects a natural reply', () => {
-  const prompt = makePrompt({ mode: 'ai', returnUrl: `${root}#import` }, roles);
-  assert.match(prompt, /记忆、历史聊天和当前项目的近期任务/);
-  assert.match(prompt, /最多参考 20 条相关记录/);
-  assert.match(prompt, /观察你这个 AI/);
-  assert.match(prompt, /用自然中文一次答完/);
-  assert.doesNotMatch(prompt, /JSON|先问|起止日期|情境题/);
-  assert.ok(prompt.endsWith(`${root}#import`));
+test('copies complete prompts, embedded role codes and the GitHub guide in both modes', () => {
+  for (const mode of ['human', 'ai']) {
+    const returnUrl = `${root}#import${mode === 'ai' ? '-ai' : ''}`;
+    const prompt = makePrompt({ mode, returnUrl }, roles);
+    assert.match(prompt, /记忆、历史聊天和当前项目的近期任务/);
+    assert.match(prompt, /最多参考 20 条相关记录/);
+    assert.match(prompt, /https:\/\/github\.com\/yuxuan6426\/CountyUkiyoe-Play\/blob\/main\/docs\/agent-guide\.md/);
+    assert.match(prompt, mode === 'ai' ? /观察你这个 AI/u : /观察我这个用户/u);
+    for (const role of roles) assert.ok(prompt.includes(`${role.id} ${role.name} · ${role.trait}`));
+    assert.ok(prompt.includes(JSON.stringify(makeExampleReceipt(mode), null, 2)));
+    assert.ok(prompt.endsWith(returnUrl));
+    assert.throws(() => readReply(prompt, roles), /提示词发给 AI/u);
+  }
+});
+
+test('imports the complete V2 receipt and keeps its report out of role sharing', () => {
+  for (const mode of ['human', 'ai']) {
+    const receipt = makeExampleReceipt(mode);
+    const json = JSON.stringify(receipt, null, 2);
+    const wrapped = ['这是我观察到的结果。', '```JSON', json, '```', '贴回网页即可翻牌。'].join('\r\n');
+    for (const input of [json, wrapped, JSON.stringify({ data: receipt }), `${json}\n${json}`]) {
+      const parsed = readReply(input, roles);
+      const card = matchCard(parsed, roles);
+      assert.equal(card.mode, mode);
+      assert.equal(card.role.id, '0190');
+      assert.equal(card.source, '本次对话');
+      assert.deepEqual(card.labels, ['先把事情列清楚', '先看细节再开口']);
+      assert.deepEqual(card.report, receipt.report);
+      assert.equal(readShare(new URL(makeShareUrl(root, mode, card.role.id)).hash, roles).report, undefined);
+    }
+  }
+});
+
+test('keeps independently useful fields in a partially formatted V2 report', () => {
+  const raw = makeExampleReceipt('human');
+  const receipt = { ...raw, report: { why: '  <b>普通文本</b>  ', patterns: [{}, '先列清单', '', '再观察'], limits: 8 } };
+  assert.deepEqual(readReply(JSON.stringify(receipt), roles).report, {
+    why: '<b>普通文本</b>', patterns: ['先列清单', '再观察'], limits: '',
+  });
+  assert.equal(readReply(JSON.stringify({ ...raw, report: null }), roles).report, undefined);
+});
+
+test('uses explicit V2 status and rejects incompatible or conflicting receipts', () => {
+  const receipt = makeExampleReceipt('human');
+  const json = JSON.stringify(receipt);
+  const unavailable = {
+    ...receipt, status: 'insufficient_evidence', role_id: null, traits: [],
+    report: { why: '', patterns: [], limits: '还没有足够的办事例子。' },
+  };
+  assert.throws(() => readReply(`先列清单不代表一定有结论。\n${JSON.stringify(unavailable)}`, roles), /线索还不足/u);
+  assert.throws(() => readReply(JSON.stringify({ v: 1, status: 'insufficient', traits: ['organize'] }), roles), /线索还不足/u);
+  for (const invalid of [
+    { ...receipt, v: 3 }, { ...receipt, role_id: '1144' }, { ...receipt, mode: 'other' },
+    { ...receipt, traits: ['organize', 'made-up'] }, { ...receipt, traits: ['organize', 'organize'] },
+    { ...unavailable, traits: ['organize'] },
+  ]) assert.throws(() => readReply(`结论：先列清单。\n${JSON.stringify(invalid)}`, roles), /回执的格式或匹配/u);
+  assert.throws(() => readReply(`${json.slice(0, -1)},}`, roles), /回执的格式或匹配/u);
+  assert.throws(() => readReply(`${json}\n${JSON.stringify(makeExampleReceipt('ai'))}`, roles), /回执的格式或匹配/u);
+});
+
+test('matches independent Markdown or prose without treating JSON metadata as evidence', () => {
+  assert.equal(matchCard(readReply('**主卡**：县城能人\n- 你总会自己上手。', roles), roles).role.id, '1190');
+  assert.equal(matchCard(readReply('说明来了：{"internalDetails":"列清单"}\n先做个小样试试。', roles), roles).role.id, '0206');
+  assert.throws(() => readReply('说明来了：{"internalDetails":"列清单"}', roles), /点选/u);
+  assert.throws(() => readReply('```json\n{"internalDetails":"列清单",}\n```', roles), /点选/u);
 });

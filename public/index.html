@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ece4d4">
-  <meta name="description" content="复制一句话发给常用的 AI，贴回它的回复，领一张县城人物卡。">
+  <meta name="description" content="复制领卡提示词发给常用的 AI，贴回它的回复，领一张县城人物卡。">
   <meta property="og:title" content="县城浮世绘 · 领卡处">
-  <meta property="og:description" content="复制一句话发给常用的 AI，贴回它的回复，领一张县城人物卡。">
+  <meta property="og:description" content="复制领卡提示词发给常用的 AI，贴回它的回复，领一张县城人物卡。">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./style.css">
   <script src="./app.mjs" type="module"></script>
@@ -20,7 +20,7 @@
     <section class="hero" id="home" aria-labelledby="hero-title">
       <div class="hero-copy">
         <h1 id="hero-title">AI 眼里，你是哪张县城卡<span>？</span></h1>
-        <p>复制一句话发给常用的 AI，再把它的回复粘回来。</p>
+        <p>复制领卡提示词发给常用的 AI，再把它的回复粘回来。</p>
       </div>
       <figure class="specimen">
         <div class="photo"><img src="./portraits/0055.jpg" alt="县城人脉哥的原创虚构人物插画" width="768" height="1024" fetchpriority="high"></div>
@@ -32,6 +32,14 @@
         <img id="role-portrait" width="768" height="1024" alt="">
         <div class="result-content"><p id="result-label" class="step-label"></p><h2 id="role-name" tabindex="-1"></h2><p id="result-traits" class="traits"></p><p id="result-caption"></p><a id="role-link" class="reference" target="_blank" rel="noopener noreferrer">翻阅原档案 ↗</a></div>
       </div>
+      <section id="result-report" class="result-report" hidden aria-labelledby="report-title">
+        <h3 id="report-title">领卡解读</h3>
+        <dl>
+          <div id="report-why"><dt>为什么像</dt><dd id="report-why-text"></dd></div>
+          <div id="report-patterns"><dt>办事表现</dt><dd><ul id="report-patterns-list"></ul></dd></div>
+          <div id="report-limits"><dt>判断边界</dt><dd id="report-limits-text"></dd></div>
+        </dl>
+      </section>
       <div class="result-tools">
         <button class="primary" type="button" id="save-card">生成分享图</button><button class="outline" type="button" id="copy-role">复制角色链接</button><button class="text-button" type="button" id="start-again">测测你自己</button>
       </div>
@@ -42,7 +50,7 @@
       <section id="prompt-section" class="step" aria-labelledby="prompt-title">
         <p class="step-label"><span>01</span> 领题</p><h2 id="prompt-title" tabindex="-1">发给常用的 AI</h2>
         <label class="consent"><input type="checkbox" id="consent" aria-describedby="privacy-note"><span>我同意让 AI 参考它已能访问的聊天、记忆和任务记录。</span></label>
-        <details class="privacy"><summary>隐私说明</summary><p>AI 在自身环境中用已有权限只读相关记录。领卡页在浏览器中识别贴回的文本，分享链接仅包含角色和领卡对象。</p></details>
+        <details class="privacy"><summary>隐私说明</summary><p>AI 在自身环境中用已有权限只读相关记录。领卡页在浏览器中识别贴回的文本，领卡解读留在本页，分享链接仅包含角色和领卡对象。</p></details>
         <p class="hint" id="privacy-note">你选用的 AI 决定可读取的范围。本站在浏览器里处理回复。</p>
         <div class="copy-actions"><button class="primary" type="button" data-copy-mode="human" aria-disabled="true">复制提示词</button><button class="text-button" type="button" data-copy-mode="ai" aria-disabled="true">测我的 AI</button></div>
         <p id="copy-status" class="status" role="status"></p>
@@ -51,7 +59,7 @@
       <section id="import" class="step" aria-labelledby="import-title">
         <p class="step-label"><span>02</span> 翻牌</p><h2 id="import-title">贴回 AI 回复</h2>
         <form id="import-form">
-          <label for="reply" class="visually-hidden">AI 回复</label><textarea id="reply" rows="4" maxlength="65536" spellcheck="false" placeholder="把 AI 的整条回复粘在这里"></textarea>
+          <label for="reply" class="visually-hidden">AI 回复</label><textarea id="reply" rows="4" maxlength="65536" spellcheck="false" placeholder="粘贴 AI 的整条回复，含 JSON、Markdown 或中文描述"></textarea>
           <p class="hint" id="import-mode" hidden>正在给你的 AI 领卡。</p>
           <div class="import-actions"><button type="submit" class="primary">翻开我的卡</button><button type="button" id="example" class="text-button">看个示例</button></div><p id="import-status" class="status" role="status"></p>
         </form>
