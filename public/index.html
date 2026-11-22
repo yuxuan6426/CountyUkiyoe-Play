@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ece4d4">
-  <meta name="description" content="让你的 AI 读出办事习惯，回来领一张县城人物卡。">
+  <meta name="description" content="复制一句话发给常用的 AI，贴回它的回复，领一张县城人物卡。">
   <meta property="og:title" content="县城浮世绘 · 领卡处">
-  <meta property="og:description" content="让你的 AI 读出办事习惯，回来领一张县城人物卡。">
+  <meta property="og:description" content="复制一句话发给常用的 AI，贴回它的回复，领一张县城人物卡。">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./style.css">
   <script src="./app.mjs" type="module"></script>
@@ -19,14 +19,12 @@
   <main class="wrap">
     <section class="hero" id="home" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <h1 id="hero-title">进了县城，<br>你是哪一张卡<span>？</span></h1>
-        <p>让常用的 AI 回想你们平时怎么办事。带着它给的行为特征回来，领一张县城人物卡。</p>
-        <div class="hero-actions"><button type="button" class="primary" data-start="human">AI 眼里的我 <span aria-hidden="true">↗</span></button><button type="button" class="outline" data-start="ai">我的 AI 像谁</button></div>
-        <a class="import-jump" href="#import">手上已有回执？直接翻牌 <span aria-hidden="true">↓</span></a>
+        <h1 id="hero-title">AI 眼里，你是哪张县城卡<span>？</span></h1>
+        <p>复制一句话发给常用的 AI，再把它的回复粘回来。</p>
       </div>
       <figure class="specimen">
         <div class="photo"><img src="./portraits/0055.jpg" alt="县城人脉哥的原创虚构人物插画" width="768" height="1024" fetchpriority="high"></div>
-        <figcaption><span>图鉴原型 <b>0055</b></span><strong>县城人脉哥</strong></figcaption>
+        <figcaption><strong>县城人脉哥</strong></figcaption>
       </figure>
     </section>
     <section class="result-section" id="result" hidden aria-labelledby="role-name">
@@ -40,24 +38,24 @@
       <p id="result-status" class="status" role="status"></p>
       <div id="share-preview" class="share-preview" hidden><img id="preview-image" alt="个人图卡预览"><div class="result-tools"><a id="download" class="primary" download="县城浮世绘-人物卡.png">下载 PNG</a><button type="button" id="share-native" class="outline" hidden>分享图片</button></div><p class="hint">手机也可以长按图片保存。</p></div>
     </section>
-    <div class="steps">
+    <div class="steps" id="play">
       <section id="prompt-section" class="step" aria-labelledby="prompt-title">
-        <p class="step-label"><span>01</span> 领题</p><h2 id="prompt-title" tabindex="-1">把题递给常用的 AI</h2>
-        <form id="prompt-form">
-          <fieldset><legend>给谁领卡</legend><label><input type="radio" name="mode" value="human" checked> AI 眼里的我</label><label><input type="radio" name="mode" value="ai"> 我的 AI 像谁</label></fieldset>
-          <fieldset><legend>发给哪种 AI</legend><label><input type="radio" name="client" value="chatbot" checked> Chatbot</label><label><input type="radio" name="client" value="agent"> Agent</label></fieldset>
-          <label class="history"><input type="checkbox" name="history"> 深入取材</label><p class="hint" id="scope-note"></p>
-          <button class="primary" type="button" id="copy-prompt">复制提示词</button><p id="copy-status" class="status" role="status"></p>
-          <details id="prompt-detail"><summary>查看提示词</summary><textarea id="prompt-text" readonly rows="8" aria-label="提示词"></textarea></details>
-        </form>
+        <p class="step-label"><span>01</span> 领题</p><h2 id="prompt-title" tabindex="-1">发给常用的 AI</h2>
+        <label class="consent"><input type="checkbox" id="consent" aria-describedby="privacy-note"><span>我同意让 AI 参考它已能访问的聊天、记忆和任务记录。</span></label>
+        <details class="privacy"><summary>隐私说明</summary><p>AI 在自身环境中用已有权限只读相关记录。领卡页在浏览器中识别贴回的文本，分享链接仅包含角色和领卡对象。</p></details>
+        <p class="hint" id="privacy-note">你选用的 AI 决定可读取的范围。本站在浏览器里处理回复。</p>
+        <div class="copy-actions"><button class="primary" type="button" data-copy-mode="human" aria-disabled="true">复制提示词</button><button class="text-button" type="button" data-copy-mode="ai" aria-disabled="true">测我的 AI</button></div>
+        <p id="copy-status" class="status" role="status"></p>
+        <textarea id="prompt-text" hidden readonly rows="5" aria-label="提示词"></textarea>
       </section>
       <section id="import" class="step" aria-labelledby="import-title">
-        <p class="step-label"><span>02</span> 翻牌</p><h2 id="import-title">带回 AI 给你的回执</h2>
+        <p class="step-label"><span>02</span> 翻牌</p><h2 id="import-title">贴回 AI 回复</h2>
         <form id="import-form">
-          <label for="reply" class="field-title">AI 回复</label><textarea id="reply" rows="7" maxlength="65536" spellcheck="false" placeholder="把 AI 的整条回复粘在这里"></textarea>
-          <p class="hint">只提取回执里的行为特征。匹配和出图都在当前浏览器完成。</p>
-          <div class="import-actions"><button type="submit" class="primary">翻开我的卡</button><button type="button" id="example" class="text-button">用示例试一次</button></div><p id="import-status" class="status" role="status"></p>
+          <label for="reply" class="visually-hidden">AI 回复</label><textarea id="reply" rows="4" maxlength="65536" spellcheck="false" placeholder="把 AI 的整条回复粘在这里"></textarea>
+          <p class="hint" id="import-mode" hidden>正在给你的 AI 领卡。</p>
+          <div class="import-actions"><button type="submit" class="primary">翻开我的卡</button><button type="button" id="example" class="text-button">看个示例</button></div><p id="import-status" class="status" role="status"></p>
         </form>
+        <div id="role-picker" class="role-picker" hidden><div id="role-options" class="role-options" role="group" aria-label="自行选择角色"></div></div>
       </section>
     </div>
   </main>

@@ -45,15 +45,27 @@ def build(output, base):
         target = output / name
         target.parent.mkdir(parents=True, exist_ok=True)
         copyfile(source, target)
-    if base:
-        index = output / 'index.html'
-        metadata = f'<meta property="og:image" content="{escape(base)}portraits/0055.jpg">\n'
-        index.write_text(index.read_text(encoding='utf-8').replace('</head>', metadata + '</head>'),
-                         encoding='utf-8', newline='\n')
     catalog = [{k: v for k, v in role.items() if k != 'sha256'} for role in roles]
     variables = {'roles': catalog, 'configuredBase': base, 'archiveBase': ARCHIVE}
-    (output / 'catalog.mjs').write_text(''.join(f'export const {key} = {json.dumps(value, ensure_ascii=False)};\n'
-                                                for key, value in variables.items()), encoding='utf-8', newline='\n')
+    catalog_code = ''.join(f'export const {key} = {json.dumps(value, ensure_ascii=False)};\n'
+                           for key, value in variables.items())
+    (output / 'catalog.mjs').write_text(catalog_code, encoding='utf-8', newline='\n')
+
+    # Give the entry point and its imports the same cache version per build.
+    version_inputs = [catalog_code.encode('utf-8'), *((PUBLIC / name).read_bytes()
+                                                      for name in ('app.mjs', 'core.mjs', 'style.css'))]
+    version = hashlib.sha256(b'\0'.join(version_inputs)).hexdigest()[:12]
+    app = (PUBLIC / 'app.mjs').read_text(encoding='utf-8')
+    for name in ('catalog.mjs', 'core.mjs'):
+        app = app.replace(f"'./{name}'", f"'./{name}?v={version}'")
+    (output / 'app.mjs').write_text(app, encoding='utf-8', newline='\n')
+    html = (PUBLIC / 'index.html').read_text(encoding='utf-8')
+    for name in ('style.css', 'app.mjs'):
+        html = html.replace(f'"./{name}"', f'"./{name}?v={version}"')
+    if base:
+        metadata = f'<meta property="og:image" content="{escape(base)}portraits/0055.jpg">\n'
+        html = html.replace('</head>', metadata + '</head>')
+    (output / 'index.html').write_text(html, encoding='utf-8', newline='\n')
     return [name for _, name in assets] + ['catalog.mjs']
 
 

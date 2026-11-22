@@ -3,52 +3,72 @@ import { modes, makePrompt, readReply, matchCard, makeShareUrl, readShare } from
 
 const byId = id => document.getElementById(id);
 const pageBase = configuredBase || new URL('./', location.href).href;
-const form = byId('prompt-form');
+const consent = byId('consent');
+const promptText = byId('prompt-text');
+const copyButtons = document.querySelectorAll('[data-copy-mode]');
+const reply = byId('reply');
 const portrait = byId('role-portrait');
+let mode = 'human';
 let currentCard;
 let previewUrl;
 let previewFile;
 
-function fillPrompt() {
-  const formData = new FormData(form);
-  const settings = { mode: formData.get('mode'), client: formData.get('client'), history: formData.has('history'), returnUrl: new URL('#import', pageBase).href };
-  byId('scope-note').textContent = !settings.history ? '用本次对话里的线索。' : settings.client === 'agent'
-    ? '在 Agent 对话里指定项目与日期。建议近 30 天，最多参考 20 条记录。'
-    : '由你的 AI 使用已开放的记忆和相关历史。';
-  byId('prompt-text').value = makePrompt(settings, roles);
-  byId('copy-status').textContent = '';
+function selectMode(value) {
+  mode = value;
+  byId('import-mode').hidden = value !== 'ai';
 }
 
 async function copyText(value) {
   await navigator.clipboard.writeText(value);
 }
 
-form.addEventListener('change', fillPrompt);
-form.addEventListener('submit', event => event.preventDefault());
-fillPrompt();
+function updateConsent() {
+  for (const button of copyButtons) button.setAttribute('aria-disabled', String(!consent.checked));
+  byId('copy-status').textContent = '';
+  if (consent.checked) return;
+  promptText.hidden = true;
+  promptText.value = '';
+}
 
-byId('copy-prompt').addEventListener('click', async () => {
+consent.addEventListener('change', updateConsent);
+updateConsent();
+
+for (const button of copyButtons) button.addEventListener('click', async () => {
+  if (!consent.checked) {
+    byId('copy-status').textContent = '勾选同意后即可复制。';
+    consent.focus();
+    return;
+  }
+  selectMode(button.dataset.copyMode);
+  const returnUrl = new URL(mode === 'ai' ? '#import-ai' : '#import', pageBase).href;
+  const value = makePrompt({ mode, returnUrl }, roles);
   try {
-    await copyText(byId('prompt-text').value);
-    byId('copy-status').textContent = '提示词已复制。发给你的 AI，拿到回复就可以回来翻牌。';
+    await copyText(value);
+    if (!consent.checked) return;
+    promptText.hidden = true;
+    promptText.value = '';
+    byId('copy-status').textContent = '已复制。发给你的 AI，再把回复贴回来。';
   } catch {
-    byId('prompt-detail').open = true;
-    byId('prompt-text').focus();
-    byId('prompt-text').select();
-    byId('copy-status').textContent = '提示词已选中，请用浏览器的复制功能。';
+    if (!consent.checked) return;
+    promptText.hidden = false;
+    promptText.value = value;
+    promptText.focus();
+    promptText.select();
+    byId('copy-status').textContent = '提示词已选中，可以直接复制。';
   }
 });
 
-function gotoPrompt(mode) {
-  if (location.hash.startsWith('#card=')) history.replaceState(null, '', new URL('./', location.href));
-  form.elements.mode.value = mode;
-  fillPrompt();
+function gotoPrompt() {
+  if (location.hash.startsWith('#card=') || location.hash === '#import-ai') history.replaceState(null, '', new URL('./', location.href));
+  selectMode('human');
+  currentCard = undefined;
+  clearPreview();
+  byId('result').hidden = true;
   byId('prompt-title').focus();
   byId('prompt-section').scrollIntoView({ block: 'start' });
 }
 
-document.querySelectorAll('[data-start]').forEach(button => button.addEventListener('click', () => gotoPrompt(button.dataset.start)));
-byId('start-again').addEventListener('click', () => gotoPrompt('human'));
+byId('start-again').addEventListener('click', gotoPrompt);
 
 function clearPreview() {
   if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -63,6 +83,7 @@ function clearPreview() {
 function showResult(card, focus = true) {
   currentCard = card;
   clearPreview();
+  byId('role-picker').hidden = true;
   portrait.src = `./portraits/${card.role.id}.jpg`;
   portrait.alt = `${card.role.name}的原创虚构人物插画`;
   byId('role-link').href = new URL(`gallery/characters/${card.role.slug}/dossier.md`, archiveBase).href;
@@ -79,31 +100,59 @@ function showResult(card, focus = true) {
 function checkLink() {
   const card = readShare(location.hash, roles);
   if (card) showResult(card, false);
+  else if (location.hash === '#import-ai') {
+    selectMode('ai');
+    byId('import').scrollIntoView({ block: 'start' });
+  }
   else if (location.hash.startsWith('#card=')) {
     byId('import-status').textContent = '请从领题开始，或用这页的示例领一张卡。';
-    gotoPrompt('human');
+    gotoPrompt();
   }
 }
 window.addEventListener('hashchange', checkLink);
 checkLink();
 
+function showLocalCard(card) {
+  if (location.hash.startsWith('#card=')) history.replaceState(null, '', new URL('./', location.href));
+  byId('import-status').textContent = '';
+  showResult(card);
+}
+
 byId('example').addEventListener('click', () => {
-  byId('reply').value = `COUNTY_CARD_V1\n${JSON.stringify({ v: 1, mode: form.elements.mode.value, scope: 'scenario', traits: ['organize', 'observe'] })}`;
-  byId('import-status').textContent = '示例回执已填好，可以翻牌。';
-  byId('reply').focus();
+  const card = matchCard({ mode, scope: 'current', traits: ['organize', 'observe'] }, roles);
+  showLocalCard({ ...card, source: '示例卡' });
+});
+
+for (const role of roles) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = role.name;
+  button.addEventListener('click', () => {
+    const card = matchCard({ mode, scope: 'manual', traits: [role.trait] }, roles);
+    reply.value = '';
+    showLocalCard(card);
+  });
+  byId('role-options').append(button);
+}
+
+reply.addEventListener('input', () => {
+  byId('import-status').textContent = '';
+  byId('role-picker').hidden = true;
 });
 
 byId('import-form').addEventListener('submit', event => {
   event.preventDefault();
   try {
-    const card = matchCard(readReply(byId('reply').value, roles), roles);
-    if (location.hash.startsWith('#card=')) history.replaceState(null, '', new URL('./', location.href));
-    byId('reply').value = '';
-    byId('import-status').textContent = '';
-    showResult(card);
+    const card = matchCard(readReply(reply.value, roles, mode), roles);
+    reply.value = '';
+    showLocalCard(card);
   } catch (error) {
+    currentCard = undefined;
+    clearPreview();
+    byId('result').hidden = true;
     byId('import-status').textContent = error.message;
-    byId('reply').focus();
+    byId('role-picker').hidden = !reply.value.trim();
+    reply.focus();
   }
 });
 
