@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ece4d4">
+  <meta name="description" content="让你的 AI 读出办事习惯，回来领一张县城人物卡。">
+  <meta property="og:title" content="县城浮世绘 · 领卡处">
+  <meta property="og:description" content="让你的 AI 读出办事习惯，回来领一张县城人物卡。">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.mjs" type="module"></script>
+  <title>县城浮世绘 · 领卡处</title>
+</head>
+<body>
+  <header class="mast">
+    <div class="mast-inner"><a class="brand" href="./"><span class="seal" aria-hidden="true">县城<br>浮世</span><span><strong>县城浮世绘</strong><small>领卡处</small></span></a><a class="archive-link" href="https://yuxuan6426.github.io/CountyUkiyoe/site/index.html#gallery">翻阅人物图鉴 <span aria-hidden="true">↗</span></a></div>
+  </header>
+  <main class="wrap">
+    <section class="hero" id="home" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <h1 id="hero-title">进了县城，<br>你是哪一张卡<span>？</span></h1>
+        <p>让常用的 AI 回想你们平时怎么办事。带着它给的行为特征回来，领一张县城人物卡。</p>
+        <div class="hero-actions"><button type="button" class="primary" data-start="human">AI 眼里的我 <span aria-hidden="true">↗</span></button><button type="button" class="outline" data-start="ai">我的 AI 像谁</button></div>
+        <a class="import-jump" href="#import">手上已有回执？直接翻牌 <span aria-hidden="true">↓</span></a>
+      </div>
+      <figure class="specimen">
+        <div class="photo"><img src="./portraits/0055.jpg" alt="县城人脉哥的原创虚构人物插画" width="768" height="1024" fetchpriority="high"></div>
+        <figcaption><span>图鉴原型 <b>0055</b></span><strong>县城人脉哥</strong></figcaption>
+      </figure>
+    </section>
+    <section class="result-section" id="result" hidden aria-labelledby="role-name">
+      <div class="result-card" id="result-card">
+        <img id="role-portrait" width="768" height="1024" alt="">
+        <div class="result-content"><p id="result-label" class="step-label"></p><h2 id="role-name" tabindex="-1"></h2><p id="result-traits" class="traits"></p><p id="result-caption"></p><a id="role-link" class="reference" target="_blank" rel="noopener noreferrer">翻阅原档案 ↗</a></div>
+      </div>
+      <div class="result-tools">
+        <button class="primary" type="button" id="save-card">生成分享图</button><button class="outline" type="button" id="copy-role">复制角色链接</button><button class="text-button" type="button" id="start-again">测测你自己</button>
+      </div>
+      <p id="result-status" class="status" role="status"></p>
+      <div id="share-preview" class="share-preview" hidden><img id="preview-image" alt="个人图卡预览"><div class="result-tools"><a id="download" class="primary" download="县城浮世绘-人物卡.png">下载 PNG</a><button type="button" id="share-native" class="outline" hidden>分享图片</button></div><p class="hint">手机也可以长按图片保存。</p></div>
+    </section>
+    <div class="steps">
+      <section id="prompt-section" class="step" aria-labelledby="prompt-title">
+        <p class="step-label"><span>01</span> 领题</p><h2 id="prompt-title" tabindex="-1">把题递给常用的 AI</h2>
+        <form id="prompt-form">
+          <fieldset><legend>给谁领卡</legend><label><input type="radio" name="mode" value="human" checked> AI 眼里的我</label><label><input type="radio" name="mode" value="ai"> 我的 AI 像谁</label></fieldset>
+          <fieldset><legend>发给哪种 AI</legend><label><input type="radio" name="client" value="chatbot" checked> Chatbot</label><label><input type="radio" name="client" value="agent"> Agent</label></fieldset>
+          <label class="history"><input type="checkbox" name="history"> 深入取材</label><p class="hint" id="scope-note"></p>
+          <button class="primary" type="button" id="copy-prompt">复制提示词</button><p id="copy-status" class="status" role="status"></p>
+          <details id="prompt-detail"><summary>查看提示词</summary><textarea id="prompt-text" readonly rows="8" aria-label="提示词"></textarea></details>
+        </form>
+      </section>
+      <section id="import" class="step" aria-labelledby="import-title">
+        <p class="step-label"><span>02</span> 翻牌</p><h2 id="import-title">带回 AI 给你的回执</h2>
+        <form id="import-form">
+          <label for="reply" class="field-title">AI 回复</label><textarea id="reply" rows="7" maxlength="65536" spellcheck="false" placeholder="把 AI 的整条回复粘在这里"></textarea>
+          <p class="hint">只提取回执里的行为特征。匹配和出图都在当前浏览器完成。</p>
+          <div class="import-actions"><button type="submit" class="primary">翻开我的卡</button><button type="button" id="example" class="text-button">用示例试一次</button></div><p id="import-status" class="status" role="status"></p>
+        </form>
+      </section>
+    </div>
+  </main>
+  <footer class="wrap footer"><span>原创肖像来自县城浮世绘人物图鉴 · yuxuan6426</span><span><a href="./ASSET-LICENSE.md">图像许可</a> <a href="https://github.com/yuxuan6426/CountyUkiyoe-Play">项目源码</a></span></footer>
+</body>
+</html>

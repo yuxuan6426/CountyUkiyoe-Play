@@ -1,0 +1,74 @@
+[
+  {
+    "id": "0055",
+    "slug": "0055-county-connections-guy",
+    "name": "县城人脉哥",
+    "trait": "connect",
+    "label": "先找合适的人",
+    "scene": "朋友问这条街的铺面值不值得盘，你先找到开过店的人，打听那条街真正忙起来是什么时候。",
+    "sha256": "9897475828d93b1420acef6f243caaadba695b879299b2bfd0092828d3e4881e"
+  },
+  {
+    "id": "0190",
+    "slug": "0190-county-briefcase",
+    "name": "县城公文包",
+    "trait": "organize",
+    "label": "先把事情列清楚",
+    "scene": "朋友递过来一叠租铺材料，你找张纸，把租金、流水和该问的问题分成三栏。",
+    "sha256": "cbd6cd9cee31272d6c490f7474d2af8aa06543c7ea6ef2b37e784be629e82122"
+  },
+  {
+    "id": "0206",
+    "slug": "0206-grilled-noodle-vendor",
+    "name": "县城烤冷面摊主",
+    "trait": "prototype",
+    "label": "先做个小样试试",
+    "scene": "新口味还在纸上，你已经琢磨好周六先摆一小会儿，看第一锅出炉时谁会停下来。",
+    "sha256": "44a48b32c916f4767ff20f3be34caa6c2c40f1ea4cf8946e2c570ae3ae082d09"
+  },
+  {
+    "id": "1053",
+    "slug": "1053-county-sweeping-monk",
+    "name": "县城扫地僧",
+    "trait": "boundaries",
+    "label": "先划好范围和节奏",
+    "scene": "大伙谈得正热闹，你先把今天能定的事想清楚，剩下的约到周末再谈。",
+    "sha256": "8e984cefddcb3e081615dd08055111484c30ed7ca58c52622ad8fa2076f08866"
+  },
+  {
+    "id": "1105",
+    "slug": "1105-county-hype-bro",
+    "name": "县城气氛哥",
+    "trait": "warmup",
+    "label": "先把话头接起来",
+    "scene": "第一次见面的几个人围一桌，你接过上个话头，顺手把一直没开口的人也带进了话里。",
+    "sha256": "892abb214ac2344fbe8c9870b84621e42947d58c106c2005462bccbbafcc9fbc"
+  },
+  {
+    "id": "1144",
+    "slug": "1144-county-in-the-know",
+    "name": "县城知情熟人",
+    "trait": "observe",
+    "label": "先看细节再开口",
+    "scene": "别人都在问房租，你在门口多站了会儿，留意午饭前后进店的是哪拨人。",
+    "sha256": "34c120e4d4e5b26bd6784523f0afee56ce60e10025633a53303eda47f70aee7b"
+  },
+  {
+    "id": "1156",
+    "slug": "1156-ceremony-master",
+    "name": "县城红事白事主理人",
+    "trait": "coordinate",
+    "label": "先拉齐分工和时间",
+    "scene": "周六一起张罗一场席，你先把到场时间和每个人手上的活对齐，再开席。",
+    "sha256": "dd47f4597e12979f8a91b7047fea3fedd054005f92804b990cea1026b626e391"
+  },
+  {
+    "id": "1190",
+    "slug": "1190-county-capable-person",
+    "name": "县城能人",
+    "trait": "craft",
+    "label": "先动手解决一个问题",
+    "scene": "门口的招牌歪了几天，你去借了把趁手的螺丝刀，三两下把它扶正。",
+    "sha256": "4e8ad2257abe3de5cd5bcd06d3e9560f4de770ca2dcde95f86ad3b3d0654b2f8"
+  }
+]
