@@ -1,11 +1,12 @@
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { makePrompt, makeExampleReceipt, readReply, matchCard, makeShareUrl, readShare } from '../public/core.mjs';
+import { makePrompt, makeExampleReceipt, readReply, matchCard, makeShareText, makeShareUrl, readShare } from '../public/core.mjs';
 
 const roles = JSON.parse(readFileSync(new URL('../public/roles.json', import.meta.url)));
 const plain = { v: 1, mode: 'human', scope: 'history', traits: ['organize', 'observe'] };
 const root = 'https://example.com/try/';
+const makeV2Receipt = mode => ({ ...makeExampleReceipt(mode), v: 2, traits: ['organize', 'observe'] });
 
 test('matches a plain AI reply describing a minimal example and a checklist', () => {
   const reply = readReply('我通常先跑一个最小样例，再把输出整理成清单。', roles, 'ai');
@@ -65,15 +66,19 @@ test('all eight traits resolve in both modes; share URL carries role and mode', 
   assert.equal(matchCard({ mode: 'human', scope: 'manual', traits: ['connect'] }, roles).source, '自主领卡');
 });
 
-test('copies complete prompts, embedded role codes and the GitHub guide in both modes', () => {
+test('copies complete prompts, embedded role cues and deployment links in both modes', () => {
   for (const mode of ['human', 'ai']) {
     const returnUrl = `${root}#import${mode === 'ai' ? '-ai' : ''}`;
-    const prompt = makePrompt({ mode, returnUrl }, roles);
+    const catalogUrl = root + 'matching-catalog.json';
+    const galleryUrl = 'https://yuxuan6426.github.io/CountyUkiyoe/';
+    const prompt = makePrompt({ mode, returnUrl, catalogUrl, galleryUrl }, roles);
+    assert.ok(prompt.includes(catalogUrl));
+    assert.ok(prompt.includes(galleryUrl + '\n'));
     assert.match(prompt, /记忆、历史聊天和当前项目的近期任务/);
     assert.match(prompt, /最多参考 20 条相关记录/);
-    assert.match(prompt, /https:\/\/github\.com\/yuxuan6426\/CountyUkiyoe-Play\/blob\/main\/docs\/agent-guide\.md/);
+    assert.ok(prompt.includes(root + 'agent-guide.md'));
     assert.match(prompt, mode === 'ai' ? /观察你这个 AI/u : /观察我这个用户/u);
-    for (const role of roles) assert.ok(prompt.includes(`${role.id} ${role.name} · ${role.trait}`));
+    for (const role of roles) assert.ok(prompt.includes(`${role.id} ${role.name} · ${role.label}`));
     assert.ok(prompt.includes(JSON.stringify(makeExampleReceipt(mode), null, 2)));
     assert.ok(prompt.endsWith(returnUrl));
     assert.throws(() => readReply(prompt, roles), /提示词发给 AI/u);
@@ -82,7 +87,7 @@ test('copies complete prompts, embedded role codes and the GitHub guide in both 
 
 test('imports the complete V2 receipt and keeps its report out of role sharing', () => {
   for (const mode of ['human', 'ai']) {
-    const receipt = makeExampleReceipt(mode);
+    const receipt = makeV2Receipt(mode);
     const json = JSON.stringify(receipt, null, 2);
     const wrapped = ['这是我观察到的结果。', '```JSON', json, '```', '贴回网页即可翻牌。'].join('\r\n');
     for (const input of [json, wrapped, JSON.stringify({ data: receipt }), `${json}\n${json}`]) {
@@ -99,7 +104,7 @@ test('imports the complete V2 receipt and keeps its report out of role sharing',
 });
 
 test('keeps independently useful fields in a partially formatted V2 report', () => {
-  const raw = makeExampleReceipt('human');
+  const raw = makeV2Receipt('human');
   const receipt = { ...raw, report: { why: '  <b>普通文本</b>  ', patterns: [{}, '先列清单', '', '再观察'], limits: 8 } };
   assert.deepEqual(readReply(JSON.stringify(receipt), roles).report, {
     why: '<b>普通文本</b>', patterns: ['先列清单', '再观察'], limits: '',
@@ -108,7 +113,7 @@ test('keeps independently useful fields in a partially formatted V2 report', () 
 });
 
 test('uses explicit V2 status and rejects incompatible or conflicting receipts', () => {
-  const receipt = makeExampleReceipt('human');
+  const receipt = makeV2Receipt('human');
   const json = JSON.stringify(receipt);
   const unavailable = {
     ...receipt, status: 'insufficient_evidence', role_id: null, traits: [],
@@ -117,12 +122,12 @@ test('uses explicit V2 status and rejects incompatible or conflicting receipts',
   assert.throws(() => readReply(`先列清单不代表一定有结论。\n${JSON.stringify(unavailable)}`, roles), /线索还不足/u);
   assert.throws(() => readReply(JSON.stringify({ v: 1, status: 'insufficient', traits: ['organize'] }), roles), /线索还不足/u);
   for (const invalid of [
-    { ...receipt, v: 3 }, { ...receipt, role_id: '1144' }, { ...receipt, mode: 'other' },
+    { ...receipt, v: 4 }, { ...receipt, role_id: '1144' }, { ...receipt, mode: 'other' },
     { ...receipt, traits: ['organize', 'made-up'] }, { ...receipt, traits: ['organize', 'organize'] },
     { ...unavailable, traits: ['organize'] },
   ]) assert.throws(() => readReply(`结论：先列清单。\n${JSON.stringify(invalid)}`, roles), /回执的格式或匹配/u);
   assert.throws(() => readReply(`${json.slice(0, -1)},}`, roles), /回执的格式或匹配/u);
-  assert.throws(() => readReply(`${json}\n${JSON.stringify(makeExampleReceipt('ai'))}`, roles), /回执的格式或匹配/u);
+  assert.throws(() => readReply(`${json}\n${JSON.stringify(makeV2Receipt('ai'))}`, roles), /回执的格式或匹配/u);
 });
 
 test('matches independent Markdown or prose without treating JSON metadata as evidence', () => {
@@ -130,4 +135,30 @@ test('matches independent Markdown or prose without treating JSON metadata as ev
   assert.equal(matchCard(readReply('说明来了：{"internalDetails":"列清单"}\n先做个小样试试。', roles), roles).role.id, '0206');
   assert.throws(() => readReply('说明来了：{"internalDetails":"列清单"}', roles), /点选/u);
   assert.throws(() => readReply('```json\n{"internalDetails":"列清单",}\n```', roles), /点选/u);
+});
+
+test('matches new roles by V3 receipt, numbered Markdown, and explicit names', () => {
+  const woodworker = { id: '2098', name: '县城木匠爷爷', category: '县城原型', hint: '用手边现成材料做出需要的东西' };
+  const county = [...roles, woodworker, { id: '9811', name: '同名角色' }, { id: '9812', name: '同名角色' }];
+  for (const mode of ['human', 'ai']) {
+    const raw = { ...makeExampleReceipt(mode), role_id: '2098' };
+    const card = matchCard(readReply(JSON.stringify(raw), county), county);
+    assert.equal(card.role, woodworker);
+    assert.deepEqual(card.report, raw.report);
+    const expected = makeShareUrl(root, mode, '2098');
+    const text = makeShareText(root, card);
+    assert.ok(text.includes(woodworker.name) && text.includes(woodworker.hint));
+    assert.equal(text.split('\n').at(-1), expected);
+    assert.ok(!text.includes(raw.report.why));
+    assert.equal(readShare(new URL(expected).hash, county).role, woodworker);
+    assert.throws(() => readReply(JSON.stringify({ ...raw, role_id: '9999' }), county), /格式或匹配/u);
+    assert.throws(() => readReply(JSON.stringify({ ...raw, status: 'insufficient_evidence', role_id: null }), county), /线索还不足/u);
+  }
+  for (const text of ['**主卡**：2098', '最像「县城木匠爷爷」。', '县城木匠爷爷', '{"角色编号":2098}']) {
+    assert.equal(matchCard(readReply(text, county), county).role, woodworker);
+  }
+  assert.throws(() => readReply('不像县城木匠爷爷。', county), /点选/u);
+  assert.throws(() => readReply('最像「同名角色」。', county), /四位编号/u);
+  assert.equal(matchCard(readReply('9812', county), county).role.id, '9812');
+  assert.match(makeShareText(root, readShare('#card=v1.ai.2098', county)), /^翻到一张/u);
 });

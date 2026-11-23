@@ -23,14 +23,14 @@
         <p>复制领卡提示词发给常用的 AI，再把它的回复粘回来。</p>
       </div>
       <figure class="specimen">
-        <div class="photo"><img src="./portraits/0055.jpg" alt="县城人脉哥的原创虚构人物插画" width="768" height="1024" fetchpriority="high"></div>
+        <a class="photo" href="https://xian.yuxuan.wiki/site/character.html?card=0055-county-connections-guy" aria-label="查看县城人脉哥的图鉴卡"><img id="hero-portrait" src="https://xian.yuxuan.wiki/gallery/characters/0055-county-connections-guy/portrait.jpg" alt="县城人脉哥的原创虚构人物插画" width="768" height="1024" fetchpriority="high"></a>
         <figcaption><strong>县城人脉哥</strong></figcaption>
       </figure>
     </section>
     <section class="result-section" id="result" hidden aria-labelledby="role-name">
       <div class="result-card" id="result-card">
-        <img id="role-portrait" width="768" height="1024" alt="">
-        <div class="result-content"><p id="result-label" class="step-label"></p><h2 id="role-name" tabindex="-1"></h2><p id="result-traits" class="traits"></p><p id="result-caption"></p><a id="role-link" class="reference" target="_blank" rel="noopener noreferrer">翻阅原档案 ↗</a></div>
+        <a id="role-portrait-link" target="_blank" rel="noopener noreferrer"><img id="role-portrait" width="768" height="1024" alt=""></a>
+        <div class="result-content"><p id="result-label" class="step-label"></p><h2 id="role-name" tabindex="-1"></h2><p id="result-traits" class="traits"></p><p id="result-caption"></p><a id="role-link" class="reference" target="_blank" rel="noopener noreferrer">查看图鉴卡 ↗</a></div>
       </div>
       <section id="result-report" class="result-report" hidden aria-labelledby="report-title">
         <h3 id="report-title">领卡解读</h3>
@@ -41,9 +41,10 @@
         </dl>
       </section>
       <div class="result-tools">
-        <button class="primary" type="button" id="save-card">生成分享图</button><button class="outline" type="button" id="copy-role">复制角色链接</button><button class="text-button" type="button" id="start-again">测测你自己</button>
+        <button class="primary" type="button" id="save-card">生成分享图</button><button class="outline" type="button" id="copy-role">复制分享文案</button><button class="text-button" type="button" id="start-again">测测你自己</button>
       </div>
       <p id="result-status" class="status" role="status"></p>
+      <textarea id="share-text" rows="4" aria-label="分享文案" readonly hidden></textarea>
       <div id="share-preview" class="share-preview" hidden><img id="preview-image" alt="个人图卡预览"><div class="result-tools"><a id="download" class="primary" download="县城浮世绘-人物卡.png">下载 PNG</a><button type="button" id="share-native" class="outline" hidden>分享图片</button></div><p class="hint">手机也可以长按图片保存。</p></div>
     </section>
     <div class="steps" id="play">
@@ -61,9 +62,15 @@
         <form id="import-form">
           <label for="reply" class="visually-hidden">AI 回复</label><textarea id="reply" rows="4" maxlength="65536" spellcheck="false" placeholder="粘贴 AI 的整条回复，含 JSON、Markdown 或中文描述"></textarea>
           <p class="hint" id="import-mode" hidden>正在给你的 AI 领卡。</p>
-          <div class="import-actions"><button type="submit" class="primary">翻开我的卡</button><button type="button" id="example" class="text-button">看个示例</button></div><p id="import-status" class="status" role="status"></p>
+          <div class="import-actions"><button type="submit" class="primary">翻开我的卡</button><button type="button" id="example" class="text-button">看个示例</button><button type="button" id="choose-role" class="text-button">自己选角色</button></div><p id="import-status" class="status" role="status"></p>
         </form>
-        <div id="role-picker" class="role-picker" hidden><div id="role-options" class="role-options" role="group" aria-label="自行选择角色"></div></div>
+        <div id="role-picker" class="role-picker" hidden>
+          <label for="role-search" class="visually-hidden">搜索角色</label>
+          <input id="role-search" type="search" placeholder="搜角色名或四位编号" autocomplete="off">
+          <p id="role-search-status" class="status" role="status"></p>
+          <div id="role-options" class="role-options" role="group" aria-label="自行选择角色"></div>
+          <button type="button" id="role-more" class="text-button" hidden>显示更多</button>
+        </div>
       </section>
     </div>
   </main>

@@ -1,5 +1,6 @@
-import { roles, configuredBase, archiveBase } from './catalog.mjs';
-import { modes, makeExampleReceipt, makePrompt, readReply, matchCard, makeShareUrl, readShare } from './core.mjs';
+import { roles, configuredBase, galleryBase } from './catalog.mjs';
+import { modes, makeExampleReceipt, makePrompt, readReply, matchCard, makeShareText, makeShareUrl, readShare } from './core.mjs';
+import qrcode from './qrcode.mjs';
 
 const byId = id => document.getElementById(id);
 const pageBase = configuredBase || new URL('./', location.href).href;
@@ -8,6 +9,17 @@ const promptText = byId('prompt-text');
 const copyButtons = document.querySelectorAll('[data-copy-mode]');
 const reply = byId('reply');
 const portrait = byId('role-portrait');
+const heroPortrait = byId('hero-portrait');
+const useHeroBackup = () => { heroPortrait.src = './portraits/0055.jpg'; };
+if (heroPortrait.complete && !heroPortrait.naturalWidth) useHeroBackup();
+else heroPortrait.addEventListener('error', useHeroBackup, { once: true });
+const shareText = byId('share-text');
+const picker = byId('role-picker');
+const roleSearch = byId('role-search');
+const roleOptions = byId('role-options');
+const roleMore = byId('role-more');
+const pickerPageSize = 16;
+let visibleRoles = pickerPageSize;
 let mode = 'human';
 let currentCard;
 let previewUrl;
@@ -41,7 +53,8 @@ for (const button of copyButtons) button.addEventListener('click', async () => {
   }
   selectMode(button.dataset.copyMode);
   const returnUrl = new URL(mode === 'ai' ? '#import-ai' : '#import', pageBase).href;
-  const value = makePrompt({ mode, returnUrl }, roles);
+  const catalogUrl = new URL('matching-catalog.json', pageBase).href;
+  const value = makePrompt({ mode, returnUrl, catalogUrl, galleryUrl: galleryBase }, roles);
   try {
     await copyText(value);
     if (!consent.checked) return;
@@ -64,6 +77,7 @@ function gotoPrompt() {
   currentCard = undefined;
   showReport();
   clearPreview();
+  shareText.hidden = true;
   byId('result').hidden = true;
   byId('prompt-title').focus();
   byId('prompt-section').scrollIntoView({ block: 'start' });
@@ -101,11 +115,16 @@ function showReport(report) {
 
 function showResult(card, focus = true) {
   currentCard = card;
+  shareText.hidden = true;
   clearPreview();
   byId('role-picker').hidden = true;
-  portrait.src = `./portraits/${card.role.id}.jpg`;
+  portrait.dataset.backup = new URL(`portraits/${card.role.id}.jpg`, pageBase).href;
+  portrait.src = new URL(`gallery/characters/${card.role.slug}/portrait.jpg`, galleryBase).href;
   portrait.alt = `${card.role.name}的原创虚构人物插画`;
-  byId('role-link').href = new URL(`gallery/characters/${card.role.slug}/dossier.md`, archiveBase).href;
+  const cardUrl = new URL('site/character.html', galleryBase);
+  cardUrl.searchParams.set('card', card.role.slug);
+  byId('role-link').href = cardUrl.href;
+  byId('role-portrait-link').href = cardUrl.href;
   byId('result-label').textContent = `${modes[card.mode]} · ${card.source} · ${card.role.id}`;
   byId('role-name').textContent = card.role.name;
   byId('result-traits').textContent = card.labels.join(' / ');
@@ -115,6 +134,27 @@ function showResult(card, focus = true) {
   byId('result').hidden = false;
   if (focus) byId('role-name').focus();
   byId('result').scrollIntoView({ block: 'start' });
+}
+
+portrait.addEventListener('error', () => {
+  if (portrait.dataset.backup && portrait.src !== portrait.dataset.backup) portrait.src = portrait.dataset.backup;
+});
+
+async function portraitForPoster() {
+  if (new URL(portrait.src).origin === location.origin) {
+    await portrait.decode();
+    return portrait;
+  }
+  const image = new Image();
+  image.crossOrigin = 'anonymous';
+  image.src = portrait.src;
+  try {
+    await image.decode();
+  } catch {
+    image.src = portrait.dataset.backup;
+    await image.decode();
+  }
+  return image;
 }
 
 function checkLink() {
@@ -144,17 +184,45 @@ byId('example').addEventListener('click', () => {
   showLocalCard({ ...card, source: '示例卡' });
 });
 
-for (const role of roles) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.textContent = role.name;
-  button.addEventListener('click', () => {
-    const card = matchCard({ mode, scope: 'manual', traits: [role.trait] }, roles);
-    reply.value = '';
-    showLocalCard(card);
-  });
-  byId('role-options').append(button);
+function renderRoleOptions() {
+  const query = roleSearch.value.normalize('NFKC').trim();
+  const matches = roles.filter(role => role.id.includes(query) || role.name.normalize('NFKC').includes(query));
+  roleOptions.replaceChildren(...matches.slice(0, visibleRoles).map(role => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = `${role.id} · ${role.name}`;
+    button.addEventListener('click', () => {
+      const card = matchCard({ mode, scope: 'manual', roleId: role.id }, roles);
+      reply.value = '';
+      showLocalCard(card);
+    });
+    return button;
+  }));
+  byId('role-search-status').textContent = matches.length ? '' : '没有找到角色，请换一个名称或编号。';
+  roleMore.hidden = matches.length <= visibleRoles;
 }
+
+function openPicker() {
+  roleSearch.value = '';
+  visibleRoles = pickerPageSize;
+  renderRoleOptions();
+  picker.hidden = false;
+}
+
+byId('choose-role').addEventListener('click', () => {
+  openPicker();
+  roleSearch.focus();
+});
+roleSearch.addEventListener('input', () => {
+  visibleRoles = pickerPageSize;
+  renderRoleOptions();
+});
+roleMore.addEventListener('click', () => {
+  const firstNew = visibleRoles;
+  visibleRoles += pickerPageSize;
+  renderRoleOptions();
+  roleOptions.children[firstNew]?.focus();
+});
 
 reply.addEventListener('input', () => {
   byId('import-status').textContent = '';
@@ -173,20 +241,26 @@ byId('import-form').addEventListener('submit', event => {
     clearPreview();
     byId('result').hidden = true;
     byId('import-status').textContent = error.message;
-    byId('role-picker').hidden = !reply.value.trim();
+    if (reply.value.trim()) openPicker();
     reply.focus();
   }
 });
 
 byId('copy-role').addEventListener('click', async () => {
-  const url = makeShareUrl(pageBase, currentCard.mode, currentCard.role.id);
+  const card = currentCard;
+  const text = makeShareText(pageBase, card);
   try {
-    await copyText(url);
-    byId('result-status').textContent = '角色链接已复制。朋友可以打开这张卡，继续领取自己的题。';
+    await copyText(text);
+    if (card !== currentCard) return;
+    shareText.hidden = true;
+    byId('result-status').textContent = '分享文案已复制。';
   } catch {
-    const link = Object.assign(document.createElement('input'), { value: url, readOnly: true, ariaLabel: '角色分享链接' });
-    byId('result-status').replaceChildren('请复制角色链接。', link);
-    link.select();
+    if (card !== currentCard) return;
+    shareText.value = text;
+    shareText.hidden = false;
+    shareText.focus();
+    shareText.select();
+    byId('result-status').textContent = '分享文案已选中，可以直接复制。';
   }
 });
 
@@ -206,11 +280,30 @@ function wrapText(ctx, text, x, y, width, lineHeight) {
   if (line) ctx.fillText(line, x, y);
 }
 
+function drawQr(ctx, url, left, top, size) {
+  const code = qrcode(0, 'M');
+  code.addData(url);
+  code.make();
+  const count = code.getModuleCount();
+  const moduleSize = Math.floor(size / (2 * (count + 8))) * 2;
+  const inset = Math.floor((size - count * moduleSize) / 4) * 2;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(left, top, size, size);
+  ctx.fillStyle = '#000';
+  for (let row = 0; row < count; row++) {
+    for (let column = 0; column < count; column++) {
+      if (code.isDark(row, column)) {
+        ctx.fillRect(left + inset + column * moduleSize, top + inset + row * moduleSize, moduleSize, moduleSize);
+      }
+    }
+  }
+}
+
 function drawCard(card, image) {
-  const canvas = Object.assign(document.createElement('canvas'), { width: 900, height: 1335 });
+  const canvas = Object.assign(document.createElement('canvas'), { width: 900, height: 1520 });
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ece4d4'; ctx.fillRect(0, 0, 900, 1335);
-  ctx.strokeStyle = '#28342c'; ctx.lineWidth = 3; ctx.strokeRect(29, 29, 842, 1277);
+  ctx.fillStyle = '#ece4d4'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#28342c'; ctx.lineWidth = 3; ctx.strokeRect(29, 29, 842, canvas.height - 58);
   ctx.fillStyle = '#9e3b2c'; ctx.font = `bold 26px ${bodyFont}`;
   ctx.fillText('县城浮世绘 · 领卡处', 56, 80);
   ctx.textAlign = 'right'; ctx.fillText(card.role.id, 844, 80); ctx.textAlign = 'left';
@@ -221,15 +314,25 @@ function drawCard(card, image) {
   ctx.fillStyle = '#526052'; ctx.font = `25px ${bodyFont}`;
   ctx.fillText(modes[card.mode], 56, 928);
   ctx.fillStyle = '#28342c'; ctx.font = `bold 56px ${cardFont}`;
-  ctx.fillText(card.role.name, 56, 997);
+  ctx.fillText(card.role.name, 56, 997, 788);
   ctx.font = `25px ${bodyFont}`;
-  ctx.fillText(card.labels.join(' / '), 56, 1045);
+  ctx.fillText(card.labels.join(' / '), 56, 1045, 788);
   ctx.font = `28px ${bodyFont}`;
   wrapText(ctx, card.caption, 56, 1090, 788, 38);
-  ctx.fillStyle = '#526052'; ctx.font = `19px ${bodyFont}`;
-  ctx.fillText('原创肖像：县城浮世绘人物图鉴 · yuxuan6426 · CC BY-NC-ND 4.0', 56, 1245);
-  ctx.font = `22px ${bodyFont}`;
-  ctx.fillText(new URL(pageBase).host + new URL(pageBase).pathname, 56, 1281, 788);
+  ctx.strokeStyle = '#b1af98';
+  ctx.beginPath();
+  ctx.moveTo(56, 1197);
+  ctx.lineTo(844, 1197);
+  ctx.stroke();
+  drawQr(ctx, makeShareUrl(pageBase, card.mode, card.role.id), 588, 1218, 256);
+  ctx.fillStyle = '#28342c'; ctx.font = `bold 30px ${bodyFont}`;
+  ctx.fillText('扫码看这张卡，也测测你自己', 56, 1292, 508);
+  ctx.fillStyle = '#526052'; ctx.font = `22px ${bodyFont}`;
+  const { host, pathname } = new URL(pageBase);
+  ctx.fillText(host + pathname, 56, 1332, 508);
+  ctx.font = `19px ${bodyFont}`;
+  ctx.fillText('原创肖像：县城浮世绘人物图鉴 · yuxuan6426', 56, 1398, 508);
+  ctx.fillText('CC BY-NC-ND 4.0', 56, 1426);
   return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('请重试生成分享图。')), 'image/png'));
 }
 
@@ -239,9 +342,9 @@ byId('save-card').addEventListener('click', async event => {
   button.disabled = true;
   byId('result-status').textContent = '正在生成分享图…';
   try {
-    await portrait.decode();
+    const image = await portraitForPoster();
     if (card !== currentCard) return;
-    const blob = await drawCard(card, portrait);
+    const blob = await drawCard(card, image);
     if (card !== currentCard) return;
     clearPreview();
     previewUrl = URL.createObjectURL(blob);
@@ -254,7 +357,7 @@ byId('save-card').addEventListener('click', async event => {
     byId('result-status').textContent = '图卡已生成，可以预览和保存。';
     byId('share-preview').scrollIntoView({ block: 'nearest' });
   } catch {
-    byId('result-status').textContent = '请等肖像加载后，再点生成分享图。';
+    if (card === currentCard) byId('result-status').textContent = '分享图还没生成，请在肖像加载后重试。';
   } finally {
     button.disabled = false;
   }
