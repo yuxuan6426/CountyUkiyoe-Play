@@ -20,3 +20,31 @@ python -c 'import http.server as h; from functools import partial; h.SimpleHTTPR
 ```
 
 打开 [本地领卡处](http://127.0.0.1:8104/)。运行 `node --test tests/core.test.mjs` 校验回执、匹配和分享链接。打包或换用服务器时见 [部署说明](DEPLOY.md)。肖像来自 [县城浮世绘人物图鉴](https://github.com/yuxuan6426/CountyUkiyoe)。[肖像许可](ASSET-LICENSE.md)
+
+## 部署入口
+
+| 站点 | GitHub Pages | 独立域名 |
+| --- | --- | --- |
+| 县城浮世绘人物图鉴 | [Pages](https://yuxuan6426.github.io/CountyUkiyoe/) | [Wiki](https://xian.yuxuan.wiki/) |
+| 县城隐藏属性测试 | [Pages](https://yuxuan6426.github.io/CountyUkiyoe-Quiz/) | [Wiki](https://quiz.yuxuan.wiki/) |
+| 县城浮世绘 AI 领卡处 | [Pages](https://yuxuan6426.github.io/CountyUkiyoe-Play/) | [Wiki](https://card.yuxuan.wiki/) |
+
+## 目录与维护
+
+```text
+public/           页面的 HTML、CSS、脚本和配置
+tests/            回执、匹配与分享回归
+docs/             AI 回执指南与开发记录
+dist/             构建输出
+```
+
+```sh
+python build.py --gallery-source .gallery-source --base-url https://card.yuxuan.wiki/
+node --test tests/core.test.mjs
+```
+
+生成目录为本次构建产物。代码遵循 [代码许可](LICENSE)，图鉴原创资产适用[图文许可](ASSET-LICENSE.md)。另见 [维护代理指引](AGENTS.md)、[AI 使用指引](docs/agent-guide.md)及[安全政策](SECURITY.md)。
+
+## English overview
+
+An AI-assisted card picker. Use the consent step, supply the prompt to an AI, and paste back a compatible receipt or pick a character manually.

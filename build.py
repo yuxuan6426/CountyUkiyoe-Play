@@ -11,6 +11,8 @@ from shutil import copyfile
 from urllib.parse import urlsplit
 from zipfile import ZipFile, ZIP_DEFLATED
 
+from release_checks import check_vendored, finish_release, prepare_output
+
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / 'public'
@@ -90,6 +92,9 @@ def load_gallery(source, gallery_base):
 
 
 def build(output, base, gallery_source):
+    check_vendored(ROOT, {'public/qrcode.mjs':
+        'ea91d7118a5395289170da848b7c6758b996163bfbccf312591ab65a4911b7c0'})
+    output = prepare_output(ROOT, output)
     pages = urlsplit(base).hostname == urlsplit(PAGES_ROOT).hostname
     gallery_base, quiz_base = (PAGES_GALLERY, PAGES_QUIZ) if pages else (WIKI_GALLERY, WIKI_QUIZ)
     roles, candidates, portraits = load_gallery(gallery_source, gallery_base)
@@ -130,7 +135,9 @@ def build(output, base, gallery_source):
         metadata = f'<meta property="og:image" content="{escape(image_url)}">\n'
         html = html.replace('</head>', metadata + '</head>')
     (output / 'index.html').write_text(html, encoding='utf-8', newline='\n')
-    return [name for _, name in assets] + ['catalog.mjs', 'matching-catalog.json', 'agent-guide.md']
+    names = [name for _, name in assets] + ['catalog.mjs', 'matching-catalog.json', 'agent-guide.md']
+    finish_release(output, names, base or 'https://card.yuxuan.wiki/', wiki=not pages)
+    return names + ['release.sha256']
 
 
 if __name__ == '__main__':

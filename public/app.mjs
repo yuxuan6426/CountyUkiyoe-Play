@@ -118,7 +118,7 @@ function showResult(card, focus = true) {
   shareText.hidden = true;
   clearPreview();
   byId('role-picker').hidden = true;
-  portrait.dataset.backup = new URL(`portraits/${card.role.id}.jpg`, pageBase).href;
+  portrait.dataset.backup = new URL(`./portraits/${card.role.id}.jpg`, location.href).href;
   portrait.src = new URL(`gallery/characters/${card.role.slug}/portrait.jpg`, galleryBase).href;
   portrait.alt = `${card.role.name}的原创虚构人物插画`;
   const cardUrl = new URL('site/character.html', galleryBase);

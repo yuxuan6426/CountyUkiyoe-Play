@@ -22,6 +22,7 @@ const normalize = text => text.normalize('NFKC').replace(/[*`~_]/g, '').trim();
 const unmatched = '可以直接点选一张角色卡，或粘贴 AI 提到办事习惯的那段回复。';
 
 const receiptSchema = 'county-card';
+const literalPattern = value => value.replace(/[.*+?^$(){}|[\]\\]/g, '\\$&');
 const insufficient = '线索还不足以翻牌。可以贴回一段明确的办事习惯，或从下方选一张卡。';
 const invalidReceipt = '这条回执的格式或匹配信息有出入。请复制 AI 的完整回复重试，也可以从下方选一张卡。';
 
@@ -91,14 +92,14 @@ function findSignals(value, roles, allowRoleId = false) {
         hits.push({ trait: role.trait, rank: primary ? 3 : rank, index: match.index });
       }
     };
-    add(new RegExp([...new Set(aliases)].join('|'), 'gu'), 2);
+    add(new RegExp([...new Set(aliases)].map(literalPattern).join('|'), 'gu'), 2);
     if (role.trait === 'craft' && text.trim() === '能人') hits.push({ trait: role.trait, rank: 2, index: 0 });
     if ((allowRoleId || text === role.id) && /^\d+$/u.test(text) && text.padStart(4, '0') === role.id) {
       hits.push({ trait: role.trait, rank: 2, index: 0 });
     }
     add(new RegExp(`(?:编号|卡号|原型|角色|主卡|no\\.?|id|#)[ ]*[:：#]?[ ]*${role.id}(?!\\d)`, 'giu'), 2);
     add(new RegExp(`\\b${role.trait}\\b`, 'giu'), 1);
-    add(new RegExp(role.label.replace(/^先/u, ''), 'gu'), 1);
+    add(new RegExp(literalPattern(role.label.replace(/^先/u, '')), 'gu'), 1);
     if (equivalents[role.trait]) add(equivalents[role.trait], 1);
   }
   return hits.sort((a, b) => b.rank - a.rank || a.index - b.index);
@@ -188,7 +189,7 @@ function readFormal(value, roles) {
   const why = text(report?.why, 600);
   const limits = text(report?.limits, 400);
   const patterns = Array.isArray(report?.patterns)
-    ? report.patterns.map(item => text(item, 300)).filter(Boolean).slice(0, 3)
+    ? report.patterns.slice(0, 32).map(item => text(item, 300)).filter(Boolean).slice(0, 3)
     : [];
   const card = v === 3 ? { mode, scope, roleId: id } : { mode, scope, traits };
   if (why || patterns.length || limits) card.report = { why, patterns, limits };

@@ -15,6 +15,12 @@ test('matches a plain AI reply describing a minimal example and a checklist', ()
   assert.equal(reply.mode, 'ai');
 });
 
+test('recognizes punctuation in a literal gallery name', () => {
+  const renamed = roles.map(role => role.id === '0190' ? { ...role, name: '县城公文包（试读）' } : role);
+  const reply = readReply('最像县城公文包（试读）。', renamed);
+  assert.equal(matchCard(reply, renamed).role.id, '0190');
+});
+
 test('reads standalone JSON and complete AI messages', () => {
   const json = JSON.stringify(plain);
   for (const input of [json, `回执\n\nCOUNTY_CARD_V1\n\n\`\`\`json\n${json}\n\`\`\`\n\n回领卡处翻牌`, `回执 ${json}`]) {
